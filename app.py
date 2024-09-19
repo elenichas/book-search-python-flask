@@ -1,3 +1,4 @@
+import requests
 from flask import Flask, jsonify, request, make_response
 
 
@@ -19,7 +20,7 @@ def fetch_data():
         data = []  # Fallback to an empty list if fetching fails
 
 
-@app.before_first_request
+@app.before_request
 def load_data():
     fetch_data()
 
@@ -77,11 +78,12 @@ def name_search():
     # Iterate through the 'data' list to search for a matching person
     for person in data:
         # Check if the query string is present in the person's first name (case-insensitive)
-        if query.lower() in person["first_name"].lower():
+        if query.lower() in person["username"].lower():
             # Return the matching person as a JSON response with a 200 OK status code
             return person
 
-    # If no matching person is found, return a JSON response with a message and a 404 Not Found
+        # If no matching person is found, return a JSON response with a message and a 404 Not Found
+        return {"message": "Person not found"}, 404
 
 
 @app.route("/count")
@@ -95,7 +97,7 @@ def count():
         return {"message": "data not defined"}, 500
 
 
-@app.route("/person/<uuid:id>")
+@app.route("/person/<int:id>")
 def find_by_uuid(id):
     # Iterate through the 'data' list to search for a person with a matching ID
     for person in data:
@@ -107,12 +109,12 @@ def find_by_uuid(id):
     return {"message": "person not found"}, 404
 
 
-@app.route("/person/<uuid:id>", methods=["DELETE"])
+@app.route("/person/<int:id>", methods=["DELETE"])
 def delete_by_uuid(id):
     # Iterate through the 'data' list to search for a person with a matching ID
     for person in data:
         # Check if the 'id' field of the person matches the 'id' parameter
-        if person["id"] == str(id):
+        if person["id"] == id:
             # Remove the person from the 'data' list
             data.remove(person)
             # Return a JSON response with a message confirming deletion and a 200 OK status code
