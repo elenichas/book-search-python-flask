@@ -1,5 +1,5 @@
-import requests, make_response
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request, make_response
+
 
 
 # Create an instance of the Flask class, passing in the name of the current module
@@ -13,7 +13,8 @@ def fetch_data():
     global data
     response = requests.get("https://jsonplaceholder.typicode.com/users")
     if response.status_code == 200:
-        data = response.json()["data"]  # Adjust based on the API response structure
+       data = response.json()
+
     else:
         data = []  # Fallback to an empty list if fetching fails
 
