@@ -1,36 +1,28 @@
-from flask import Flask, make_response,request
-data =  [
-    {"id": "66c09925-589a-43b6-9a5d-d1601cf53287",
-  "first_name": "Westley",
-  "last_name": "Birch",
-  "email": "wbirch0@networksolutions.com",
-  "gender": "Male",
-  "ip_address": "75.149.143.252"
-}, {
-  "id": "66c09925-589a-43b6-9a5d-d1601of53287",
-  "first_name": "Olivero",
-  "last_name": "Davidovici",
-  "email": "odavidovici1@cpanel.net",
-  "gender": "Male",
-  "ip_address": "92.79.225.111"
-}, {
-  "id": "66c09925-589a-43b6-9a5d-d1601cuu3287",
-  "first_name": "Maurice",
-  "last_name": "Pelham",
-  "email": "mpelham2@biblegateway.com",
-  "gender": "Male",
-  "ip_address": "218.100.112.143"
-}, {
-  "id": "66889925-589a-43b6-9a5d-d1601cf53287",
-  "first_name": "Tan",
-  "last_name": "Sclater",
-  "email": "tsclater3@example.com",
-  "gender": "Male",
-  "ip_address": "6.159.242.152"
-}]
+import requests, make_response
+from flask import Flask, jsonify
+
 
 # Create an instance of the Flask class, passing in the name of the current module
 app = Flask(__name__)
+
+# Global variable to store fetched data
+data = []
+
+
+def fetch_data():
+    global data
+    response = requests.get("https://jsonplaceholder.typicode.com/users")
+    if response.status_code == 200:
+        data = response.json()["data"]  # Adjust based on the API response structure
+    else:
+        data = []  # Fallback to an empty list if fetching fails
+
+
+@app.before_first_request
+def load_data():
+    fetch_data()
+
+
 # Define a route for the root URL ("/")
 @app.route("/")
 def index():
@@ -38,12 +30,14 @@ def index():
     # Return a plain text response
     return "hello nothing"
 
+
 # Define a route for the "/no_content" URL
 @app.route("/no_content")
 def no_content():
 
     # Create a dictionary with a message and return it with a 204 No Content status code
     return ({"message": "No content found"}, 204)
+
 
 # Define a route for the "/exp" URL
 @app.route("/exp")
@@ -59,18 +53,7 @@ def index_explicit():
 
 @app.route("/data")
 def get_data():
-    try:
-        # Check if 'data' exists and has a length greater than 0
-        if data and len(data) > 0:
-            # Return a JSON response with a message indicating the length of the data
-            return {"message": f"Data of length {len(data)} found"}
-        else:
-            # If 'data' is empty, return a JSON response with a 500 Internal Server Error status code
-            return {"message": "Data is empty"}, 500
-    except NameError:
-        # Handle the case where 'data' is not defined
-        # Return a JSON response with a 404 Not Found status code
-        return {"message": "Data not found"}, 404
+    return jsonify(data)
 
 
 @app.route("/name_search")
@@ -110,18 +93,20 @@ def count():
         # Return a JSON response with a message and a 500 Internal Server Error status code
         return {"message": "data not defined"}, 500
 
+
 @app.route("/person/<uuid:id>")
 def find_by_uuid(id):
     # Iterate through the 'data' list to search for a person with a matching ID
     for person in data:
         # Check if the 'id' field of the person matches the 'id' parameter
-        if person["id"] ==id:
+        if person["id"] == id:
             # Return the matching person as a JSON response with a 200 OK status code
             return person
     # If no matching person is found, return a JSON response with a message and a 404 Not Found status code
     return {"message": "person not found"}, 404
 
-@app.route("/person/<uuid:id>", methods=['DELETE'])
+
+@app.route("/person/<uuid:id>", methods=["DELETE"])
 def delete_by_uuid(id):
     # Iterate through the 'data' list to search for a person with a matching ID
     for person in data:
@@ -134,7 +119,8 @@ def delete_by_uuid(id):
     # If no matching person is found, return a JSON response with a message and a 404 Not Found status code
     return {"message": "person not found"}, 404
 
-@app.route("/person", methods=['POST'])
+
+@app.route("/person", methods=["POST"])
 def add_by_uuid():
     new_person = request.json
     if not new_person:
@@ -146,6 +132,7 @@ def add_by_uuid():
         return {"message": "data not defined"}, 500
 
     return {"message": f"{new_person['id']}"}, 200
+
 
 @app.errorhandler(404)
 def api_not_found(error):
