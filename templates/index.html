@@ -4,10 +4,20 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Book Search</title>
+
+    <!-- Bootstrap CSS -->
     <link
       rel="stylesheet"
       href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
     />
+
+    <!-- Your Custom CSS -->
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style/main.css') }}"
+    />
+
+    <!-- Adjust the path as needed -->
   </head>
   <body>
     <div class="container mt-5">
@@ -31,9 +41,15 @@
           class="form-control mr-2"
           placeholder="Search by ISBN"
         />
+        <input
+          type="text"
+          id="publish_year"
+          class="form-control mr-2"
+          placeholder="Search by publish year"
+        />
         <button type="submit" class="btn btn-primary">Search</button>
       </form>
-      <table class="table table-striped">
+      <table class="table table-striped" id="resultsTable">
         <thead>
           <tr>
             <th>Title</th>
@@ -42,7 +58,7 @@
             <th>Publish Year</th>
           </tr>
         </thead>
-        <tbody id="results"></tbody>
+        <tbody id="id="results"></tbody>
       </table>
     </div>
 
@@ -54,28 +70,33 @@
           const query = document.getElementById("query").value;
           const author = document.getElementById("author").value;
           const isbn = document.getElementById("isbn").value;
+          const publish_year = document.getElementById("publish_year").value;
 
-          fetch(`/books?query=${query}&author=${author}&isbn=${isbn}`)
+          fetch(
+            `/books?query=${query}&author=${author}&isbn=${isbn}&publish_year=${publish_year}`
+          )
             .then((response) => response.json())
             .then((data) => {
-              const resultsTable = document.getElementById("results");
-              resultsTable.innerHTML = "";
+              const resultsTable = document
+                .getElementById("resultsTable")
+                .getElementsByTagName("tbody")[0];
+              resultsTable.innerHTML = ""; // Clear previous results
               data.forEach((book) => {
                 const row = document.createElement("tr");
                 row.innerHTML = `
-                            <td>${book.title}</td>
-                            <td>${
-                              book.author_name
-                                ? book.author_name.join(", ")
-                                : "N/A"
-                            }</td>
-                            <td>${book.isbn ? book.isbn.join(", ") : "N/A"}</td>
-                            <td>${book.first_publish_year || "N/A"}</td>
-                        `;
+                    <td>${book.title}</td>
+                    <td>${
+                      book.author_name ? book.author_name.join(", ") : "N/A"
+                    }</td>
+                    <td>${book.isbn ? book.isbn.join(", ") : "N/A"}</td>
+                    <td>${
+                      book.publish_year ? book.publish_year.join(", ") : "N/A"
+                    }</td>
+                `;
                 resultsTable.appendChild(row);
               });
             })
-            .catch((error) => console.error("Error fetching data:", error));
+            .catch((error) => console.error("Error fetching books:", error));
         });
     </script>
   </body>

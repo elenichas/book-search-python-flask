@@ -43,8 +43,9 @@ def get_books():
     query = request.args.get("query")
     author = request.args.get("author")
     isbn = request.args.get("isbn")
+    publish_year = request.args.get("publish_year")
 
-    if not query and not author and not isbn:
+    if not query and not author and not isbn and not publish_year:
         return jsonify({"error": "Missing query parameters"}), 422
 
     # Define the search parameters for the API
@@ -55,14 +56,30 @@ def get_books():
         query_params["author"] = author
     if isbn:
         query_params["isbn"] = isbn
+    if publish_year:
+        query_params["publish_year"] = publish_year
 
     data = fetch_books(query_params)
 
     if "error" in data:
         return jsonify(data), 500
 
-    # Return the relevant data to the client
-    return jsonify(data["docs"])
+    # Filter the results based on the publish_year parameter if provided
+    filtered_books = data["docs"]
+    if publish_year:
+        try:
+            publish_year = int(publish_year)  # Ensure it's an integer
+            # Filter books to include only those with the specified publish year in their list
+            filtered_books = [
+                book
+                for book in data["docs"]
+                if "publish_year" in book and publish_year in book["publish_year"]
+            ]
+        except ValueError:
+            return jsonify({"error": "Invalid publish year format"}), 422
+
+    # Return the filtered or original data to the client
+    return jsonify(filtered_books)
 
 
 @app.route("/book/<isbn>")
