@@ -1,144 +1,99 @@
+from flask import Flask, jsonify, request, render_template
 import requests
-from flask import Flask, jsonify, request, make_response
+import logging
 
-
-
-# Create an instance of the Flask class, passing in the name of the current module
 app = Flask(__name__)
 
-# Global variable to store fetched data
-data = []
+# Logging configuration
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
+# Open Library API URL
+OPEN_LIBRARY_API_URL = "https://openlibrary.org/search.json"
 
 
-def fetch_data():
-    global data
-    response = requests.get("https://jsonplaceholder.typicode.com/users")
-    if response.status_code == 200:
-       data = response.json()
+# Fetch books based on search criteria
+def fetch_books(query_params):
+    try:
+        response = requests.get(OPEN_LIBRARY_API_URL, params=query_params)
+        response.raise_for_status()  # Raise an HTTPError for bad responses (4xx and 5xx)
+        return response.json()
+    except requests.exceptions.HTTPError as errh:
+        logging.error(f"HTTP Error: {errh}")
+        return {"error": f"HTTP Error: {errh}"}
+    except requests.exceptions.ConnectionError as errc:
+        logging.error(f"Connection Error: {errc}")
+        return {"error": f"Connection Error: {errc}"}
+    except requests.exceptions.Timeout as errt:
+        logging.error(f"Timeout Error: {errt}")
+        return {"error": f"Timeout Error: {errt}"}
+    except requests.exceptions.RequestException as err:
+        logging.error(f"Request Exception: {err}")
+        return {"error": f"Request Exception: {err}"}
 
-    else:
-        data = []  # Fallback to an empty list if fetching fails
 
-
-@app.before_request
-def load_data():
-    fetch_data()
-
-
-# Define a route for the root URL ("/")
 @app.route("/")
 def index():
-    # Function that handles requests to the root URL
-    # Return a plain text response
-    return "hello nothing"
+    return render_template("index.html")
 
 
-# Define a route for the "/no_content" URL
-@app.route("/no_content")
-def no_content():
+@app.route("/books")
+def get_books():
+    query = request.args.get("query")
+    author = request.args.get("author")
+    isbn = request.args.get("isbn")
 
-    # Create a dictionary with a message and return it with a 204 No Content status code
-    return ({"message": "No content found"}, 204)
+    if not query and not author and not isbn:
+        return jsonify({"error": "Missing query parameters"}), 422
 
+    # Define the search parameters for the API
+    query_params = {}
+    if query:
+        query_params["title"] = query
+    if author:
+        query_params["author"] = author
+    if isbn:
+        query_params["isbn"] = isbn
 
-# Define a route for the "/exp" URL
-@app.route("/exp")
-def index_explicit():
+    data = fetch_books(query_params)
 
-    # Create a response object with the message "Hello World"
-    resp = make_response({"message": "Hello World"})
-    # Set the status code of the response to 200
-    resp.status_code = 200
-    # Return the response object
-    return resp
+    if "error" in data:
+        return jsonify(data), 500
 
-
-@app.route("/data")
-def get_data():
-    return jsonify(data)
-
-
-@app.route("/name_search")
-def name_search():
-    """Find a person in the database based on the provided query parameter.
-
-    Returns:
-        json: Person if found, with status of 200
-        404: If not found
-        422: If the argument 'q' is missing
-    """
-    # Get the 'q' query parameter from the request URL
-    query = request.args.get("q")
-
-    # Check if the query parameter 'q' is missing or empty
-    if not query:
-        # Return a JSON response with a message indicating invalid input and a 422 Unprocessable Entity status code
-        return {"message": "Invalid input parameter"}, 422
-
-    # Iterate through the 'data' list to search for a matching person
-    for person in data:
-        # Check if the query string is present in the person's first name (case-insensitive)
-        if query.lower() in person["username"].lower():
-            # Return the matching person as a JSON response with a 200 OK status code
-            return person
-
-        # If no matching person is found, return a JSON response with a message and a 404 Not Found
-        return {"message": "Person not found"}, 404
+    # Return the relevant data to the client
+    return jsonify(data["docs"])
 
 
-@app.route("/count")
-def count():
-    try:
-        # Attempt to return the count of items in 'data' as a JSON response
-        return {"data count": len(data)}, 200
-    except NameError:
-        # Handle the case where 'data' is not defined
-        # Return a JSON response with a message and a 500 Internal Server Error status code
-        return {"message": "data not defined"}, 500
+@app.route("/book/<isbn>")
+def get_book_by_isbn(isbn):
+    if not isbn:
+        return jsonify({"error": "ISBN parameter is missing"}), 422
+
+    query_params = {"isbn": isbn}
+    data = fetch_books(query_params)
+
+    if "error" in data:
+        return jsonify(data), 500
+
+    # Assuming that the first result is the best match
+    if data["docs"]:
+        return jsonify(data["docs"][0])
+    else:
+        return jsonify({"error": "Book not found"}), 404
 
 
-@app.route("/person/<int:id>")
-def find_by_uuid(id):
-    # Iterate through the 'data' list to search for a person with a matching ID
-    for person in data:
-        # Check if the 'id' field of the person matches the 'id' parameter
-        if person["id"] == id:
-            # Return the matching person as a JSON response with a 200 OK status code
-            return person
-    # If no matching person is found, return a JSON response with a message and a 404 Not Found status code
-    return {"message": "person not found"}, 404
-
-
-@app.route("/person/<int:id>", methods=["DELETE"])
-def delete_by_uuid(id):
-    # Iterate through the 'data' list to search for a person with a matching ID
-    for person in data:
-        # Check if the 'id' field of the person matches the 'id' parameter
-        if person["id"] == id:
-            # Remove the person from the 'data' list
-            data.remove(person)
-            # Return a JSON response with a message confirming deletion and a 200 OK status code
-            return {"message": f"Person with ID {id} deleted"}, 200
-    # If no matching person is found, return a JSON response with a message and a 404 Not Found status code
-    return {"message": "person not found"}, 404
-
-
-@app.route("/person", methods=["POST"])
-def add_by_uuid():
-    new_person = request.json
-    if not new_person:
-        return {"message": "Invalid input parameter"}, 422
-    # code to validate new_person ommited
-    try:
-        data.append(new_person)
-    except NameError:
-        return {"message": "data not defined"}, 500
-
-    return {"message": f"{new_person['id']}"}, 200
-
-
+# Error Handler for 404 Not Found
 @app.errorhandler(404)
-def api_not_found(error):
-    # This function is a custom error handler for 404 Not Found errors
-    # It is triggered whenever a 404 error occurs within the Flask application
-    return {"message": "API not found"}, 404
+def page_not_found(e):
+    return jsonify({"error": "Resource not found"}), 404
+
+
+# Error Handler for 500 Internal Server Error
+@app.errorhandler(500)
+def internal_server_error(e):
+    return jsonify({"error": "Internal server error"}), 500
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
