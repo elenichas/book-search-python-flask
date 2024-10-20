@@ -25,3 +25,6 @@ This is a simple Flask web app that demonstrates how to query the Google Books A
 
 ## API Integration
 The app uses the Google Books API to fetch book data based on search criteria.
+
+![Image](https://github.com/elenichas/book-search-python-flask/blob/1573853406af9d597a2754ade5a7cb31c842b3f7/static/assets/bookSearchApp.png)
+
