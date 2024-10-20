@@ -43,7 +43,7 @@ td {
 /* Scrolling and Overflow */
 #resultsTable {
   display: block;
-  max-height: 70vh; /* Set a maximum height for the table */
+  max-height: 80vh; /* Set a maximum height for the table */
   overflow-y: auto; /* Allow vertical scrolling */
   border: 1px solid #444; /* Border for the scrolling area */
   color: white;
