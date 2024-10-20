@@ -9,14 +9,14 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-# Open Library API URL
-OPEN_LIBRARY_API_URL = "https://openlibrary.org/search.json"
+# Google Books API URL
+GOOGLE_BOOKS_API_URL = "https://www.googleapis.com/books/v1/volumes"
 
 
 # Fetch books based on search criteria
 def fetch_books(query_params):
     try:
-        response = requests.get(OPEN_LIBRARY_API_URL, params=query_params)
+        response = requests.get(GOOGLE_BOOKS_API_URL, params=query_params)
         response.raise_for_status()  # Raise an HTTPError for bad responses (4xx and 5xx)
         return response.json()
     except requests.exceptions.HTTPError as errh:
@@ -48,38 +48,51 @@ def get_books():
     if not query and not author and not isbn and not publish_year:
         return jsonify({"error": "Missing query parameters"}), 422
 
-    # Define the search parameters for the API
+    # Define the search parameters for the Google Books API
     query_params = {}
+    search_query = ""
     if query:
-        query_params["title"] = query
+        search_query += f"+intitle:{query}"
     if author:
-        query_params["author"] = author
+        search_query += f"+inauthor:{author}"
     if isbn:
-        query_params["isbn"] = isbn
-    if publish_year:
-        query_params["publish_year"] = publish_year
+        search_query += f"+isbn:{isbn}"
 
+    query_params["q"] = search_query.strip("+")  # Prepare the search query
+
+    # Get the data from Google Books API
     data = fetch_books(query_params)
 
     if "error" in data:
         return jsonify(data), 500
 
     # Filter the results based on the publish_year parameter if provided
-    filtered_books = data["docs"]
+    filtered_books = data.get("items", [])
     if publish_year:
         try:
             publish_year = int(publish_year)  # Ensure it's an integer
-            # Filter books to include only those with the specified publish year in their list
             filtered_books = [
-                book
-                for book in data["docs"]
-                if "publish_year" in book and publish_year in book["publish_year"]
+                book for book in filtered_books
+                if "publishedDate" in book["volumeInfo"] and
+                str(publish_year) in book["volumeInfo"]["publishedDate"]
             ]
         except ValueError:
             return jsonify({"error": "Invalid publish year format"}), 422
 
-    # Return the filtered or original data to the client
-    return jsonify(filtered_books)
+    # Format the response to include relevant information from Google Books API
+    results = [
+        {
+            "title": book["volumeInfo"].get("title"),
+            "authors": book["volumeInfo"].get("authors"),
+            "publishedDate": book["volumeInfo"].get("publishedDate"),
+            "description": book["volumeInfo"].get("description"),
+            "isbn": [identifier["identifier"] for identifier in book["volumeInfo"].get("industryIdentifiers", [])],
+            "thumbnail": book["volumeInfo"].get("imageLinks", {}).get("thumbnail"),
+        }
+        for book in filtered_books
+    ]
+
+    return jsonify(results)
 
 
 @app.route("/book/<isbn>")
@@ -87,15 +100,22 @@ def get_book_by_isbn(isbn):
     if not isbn:
         return jsonify({"error": "ISBN parameter is missing"}), 422
 
-    query_params = {"isbn": isbn}
+    query_params = {"q": f"isbn:{isbn}"}
     data = fetch_books(query_params)
 
     if "error" in data:
         return jsonify(data), 500
 
-    # Assuming that the first result is the best match
-    if data["docs"]:
-        return jsonify(data["docs"][0])
+    if data.get("items"):
+        book = data["items"][0]
+        return jsonify({
+            "title": book["volumeInfo"].get("title"),
+            "authors": book["volumeInfo"].get("authors"),
+            "publishedDate": book["volumeInfo"].get("publishedDate"),
+            "description": book["volumeInfo"].get("description"),
+            "isbn": [identifier["identifier"] for identifier in book["volumeInfo"].get("industryIdentifiers", [])],
+            "thumbnail": book["volumeInfo"].get("imageLinks", {}).get("thumbnail"),
+        })
     else:
         return jsonify({"error": "Book not found"}), 404
 

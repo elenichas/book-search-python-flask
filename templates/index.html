@@ -53,12 +53,14 @@
         <thead>
           <tr>
             <th>Title</th>
-            <th>Author</th>
+            <th>Authors</th>
             <th>ISBN</th>
-            <th>Publish Year</th>
+            <th>Published</th>
+            <th>Thumbnail</th>
+            <th>Description</th>
           </tr>
         </thead>
-        <tbody id="id="results"></tbody>
+        <tbody id="results"></tbody>
       </table>
     </div>
 
@@ -84,14 +86,18 @@
               data.forEach((book) => {
                 const row = document.createElement("tr");
                 row.innerHTML = `
-                    <td>${book.title}</td>
-                    <td>${
-                      book.author_name ? book.author_name.join(", ") : "N/A"
-                    }</td>
+                    <td>${book.title ? book.title : "N/A"}</td>
+                    <td>${book.authors ? book.authors.join(", ") : "N/A"}</td>
                     <td>${book.isbn ? book.isbn.join(", ") : "N/A"}</td>
-                    <td>${
-                      book.publish_year ? book.publish_year.join(", ") : "N/A"
-                    }</td>
+                    <td>${book.publishedDate ? book.publishedDate : "N/A"}</td>
+                    <td>
+                      ${
+                        book.thumbnail
+                          ? `<img src="${book.thumbnail}" alt="Thumbnail" width="50"/>`
+                          : "N/A"
+                      }
+                    </td>
+                    <td>${book.description ? book.description : "N/A"}</td>
                 `;
                 resultsTable.appendChild(row);
               });
