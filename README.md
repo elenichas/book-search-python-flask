@@ -18,10 +18,10 @@ This is a simple Flask web app that demonstrates how to query the Google Books A
 
 ## Usage
 
--Enter your search criteria (title, author, ISBN, or publication year) in the form fields.
--Click the "Search" button to query the Google Books API.
--View the results in the table below the search form.
--You can sort the results by clicking on the table headers for Title, Published Year, and Description. The arrow will indicate whether the sorting is ascending (▲) or descending (▼).
+- Enter your search criteria (title, author, ISBN, or publication year) in the form fields.
+- Click the "Search" button to query the Google Books API.
+- View the results in the table below the search form.
+- You can sort the results by clicking on the table headers for Title, Published Year, and Description. The arrow will indicate whether the sorting is ascending (▲) or descending (▼).
 
 ## API Integration
 The app uses the Google Books API to fetch book data based on search criteria.
